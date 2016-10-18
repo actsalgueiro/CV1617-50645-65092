@@ -13,6 +13,6 @@ target_link_libraries( Laplacian ${OpenCV_LIBS} )
 add_executable( HarrisCorner HarrisCorner.cpp )
 target_link_libraries( HarrisCorner ${OpenCV_LIBS} )
 
-#add_executable( FindingCountours FindingCountours.cpp )
-#target_link_libraries( FindingCountours ${OpenCV_LIBS} )
+#add_executable( FindingContours FindingContours.cpp )
+#target_link_libraries( FindingContours ${OpenCV_LIBS} )
 
