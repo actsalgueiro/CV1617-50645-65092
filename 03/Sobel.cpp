@@ -13,10 +13,9 @@ int main(int, char**)
     Mat grad;
     Mat temp;
 
-    int scale = 1;
+    int scale = 10 ;
     int delta = 0;
     int ddepth = CV_16S;
-    int c;
 
     namedWindow("Sobel",1);
 

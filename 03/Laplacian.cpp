@@ -16,9 +16,9 @@ int main(int, char**)
     int scale = 1;
     int delta = 0;
     int ddepth = CV_16S;
-    int c;
+    int kernel_size = 7;
 
-    namedWindow("Scharr",1);
+    namedWindow("Laplacian",1);
 
 
     for(;;)
@@ -33,23 +33,15 @@ int main(int, char**)
         cvtColor( src, src_gray, CV_BGR2GRAY );
 
         /// Generate grad_x and grad_y
-        Mat grad_x, grad_y;
-        Mat abs_grad_x, abs_grad_y;
+        Mat dst;
+        Mat abs_dst;
 
-        /// Gradient X
-        Scharr( src_gray, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
-        //Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
-        convertScaleAbs( grad_x, abs_grad_x );
-
-        /// Gradient Y
-        Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
-        //Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
-        convertScaleAbs( grad_y, abs_grad_y );
-
-        /// Total Gradient (approximate)
-        addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
-
-        imshow("Scharr", grad );
+        
+        // Gradient
+        Laplacian( src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( dst, abs_dst );
+        
+        imshow("Laplacian", abs_dst );
 
         if(waitKey(30) >= 0) break;
     }
