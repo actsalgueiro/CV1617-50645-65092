@@ -43,7 +43,6 @@ int FindAndDisplayChessboard(cv::Mat image,int board_w,int board_h, std::vector<
   {
 	cv::drawChessboardCorners(image, board_sz, cv::Mat(*corners), found);
 	cv::imshow("Calibration",image);
-    //printf("\n Number of corners: %d",corners->size());
 	cv::waitKey(0); 
   }
   return corners->size();
@@ -65,7 +64,14 @@ int main(int argc, char **argv)
   std::vector<std::vector<cv::Point3f> > object_pointsR;
   std::vector<std::vector<cv::Point2f> > image_pointsL;
   std::vector<std::vector<cv::Point2f> > image_pointsR;
+/*
+  // Variables for calibration
+  Mat intrinsic = Mat(3, 3, CV_32FC1);
+  Mat distCoeffs;
+  vector<Mat> rvecs;
+  vector<Mat> tvecs;
 
+*/
   // Corners detected in each image
   std::vector<cv::Point2f> corners;
   
@@ -133,7 +139,13 @@ int main(int argc, char **argv)
       sucesses++;
     }
   }
-    
+/*
+  // Write to file
+  FileStorage fs("../StereoCamParams.xml", FileStorage::WRITE);
+  fs << "cameraMatrix" << intrinsic << "distCoeffs" << distCoeffs;
+  fs.release();
+
+    */
 
   return 0;
 }
