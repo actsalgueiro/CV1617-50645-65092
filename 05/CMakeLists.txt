@@ -14,3 +14,7 @@ target_link_libraries( projectPointsToPCCamera ${OpenCV_LIBS} )
 add_executable( externalCameraCalibration externalCameraCalibration.cpp )
 target_link_libraries( externalCameraCalibration ${OpenCV_LIBS} )
 
+# Exec5
+add_executable( chessboard_refined chessboard_refined.cpp )
+target_link_libraries( chessboard_refined ${OpenCV_LIBS} )
+
