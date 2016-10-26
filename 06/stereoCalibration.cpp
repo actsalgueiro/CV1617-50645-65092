@@ -1,5 +1,5 @@
 /***********************************************************************************
-Name:           chessboardStereo.cpp
+Name:           stereoCalibration.cpp
 Revision:
 Date:           05-10-2013
 Author:         Paulo Dias
@@ -22,6 +22,9 @@ Notes:          Code generated with Visual Studio 2013 Intel OpenCV 2.4.8 librar
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+
+using namespace std;
+using namespace cv;
 
 // Function FindAndDisplayChessboard
 // find corners in a cheesboard with board_w x board_h dimensions
@@ -60,18 +63,18 @@ int main(int argc, char **argv)
   char filename[200];
 
   // Chessboard coordinates and image pixels
-  std::vector<std::vector<cv::Point3f> > object_pointsL;
-  std::vector<std::vector<cv::Point3f> > object_pointsR;
+  std::vector<std::vector<cv::Point3f> > object_points;
   std::vector<std::vector<cv::Point2f> > image_pointsL;
   std::vector<std::vector<cv::Point2f> > image_pointsR;
-/*
-  // Variables for calibration
-  Mat intrinsic = Mat(3, 3, CV_32FC1);
-  Mat distCoeffs;
-  vector<Mat> rvecs;
-  vector<Mat> tvecs;
 
-*/
+  // Variables for calibration
+  Mat intrinsic1 = Mat(3, 3, CV_32FC1);
+  Mat intrinsic2 = Mat(3, 3, CV_32FC1);
+  Mat distCoeffs1;
+  Mat distCoeffs2;
+  Mat R, E, T, F;
+
+
   // Corners detected in each image
   std::vector<cv::Point2f> corners;
   
@@ -104,13 +107,13 @@ int main(int argc, char **argv)
     }
     
 
-  // find and display corners
+    // find and display corners
     corner_count = FindAndDisplayChessboard(image,board_w,board_h,&corners);
     
-  if (corner_count == board_w * board_h)
+    if (corner_count == board_w * board_h)
     {
       image_pointsL.push_back(corners);
-    object_pointsL.push_back(obj);
+    object_points.push_back(obj);
       sucesses++;
     }
 
@@ -129,23 +132,38 @@ int main(int argc, char **argv)
     }
     
 
-  // find and display corners
+    // find and display corners
     corner_count = FindAndDisplayChessboard(image,board_w,board_h,&corners);
     
-  if (corner_count == board_w * board_h)
+    if (corner_count == board_w * board_h)
     {
       image_pointsR.push_back(corners);
-      object_pointsR.push_back(obj);
+      //object_points.push_back(obj);
       sucesses++;
     }
   }
-/*
-  // Write to file
-  FileStorage fs("../StereoCamParams.xml", FileStorage::WRITE);
-  fs << "cameraMatrix" << intrinsic << "distCoeffs" << distCoeffs;
-  fs.release();
 
-    */
+  stereoCalibrate(object_points, image_pointsL, image_pointsR, intrinsic1, distCoeffs1, intrinsic2, distCoeffs2,
+   Size(board_w, board_h), R, T, E, F, CV_CALIB_SAME_FOCAL_LENGTH);
+  
+  FileStorage fs("../stereoParams.xml", FileStorage::WRITE);
+
+  
+  if(!fs.isOpened()){
+    cout << "Failed to open stereoParams.xml" << endl;
+  }else
+  cout << endl << "Writing camera parameters" << endl;
+
+  // Write to file
+  fs << "cameraMatrix_1" << intrinsic1;
+  fs << "distCoeffs_1" << distCoeffs1;
+  fs << "cameraMatrix_2" << intrinsic2;
+  fs << "distCoeffs_2" << distCoeffs2;
+  fs << "rotation" << R;
+  fs << "translation" << T;
+  fs << "essential" << E;
+  fs << "fundamental" << F;
+  fs.release();
 
   return 0;
 }
