@@ -1,5 +1,5 @@
 /***********************************************************************************
-Name:           chessboard.cpp
+Name:           mapDisparity.cpp
 Revision:
 Date:           18-09-2012
 Author:         Paulo Dias
@@ -70,8 +70,23 @@ int main(int argc, char **argv)
   cv::Mat essential;
   cv::Mat fundamental;
 
+  // 1- Variable definition
+  // the preset has to do with the system configuration (basic, fisheye, etc.)
+  // ndisparities is the size of disparity range,
+  // in which the optimal disparity at each pixel is searched for.
+  // SADWindowSize is the size of averaging window used to match pixel blocks
+  // (larger values mean better robustness to noise, but yield blurry disparity maps)
+  int ndisparities = 16*5;
+  int SADWindowSize = 21;
+  cv::Mat imgDisparity8U;
+  cv::Mat imgDisparity16S;
+
+  //-- 2. Call the constructor for StereoBM
+  cv::Ptr<cv::StereoBM> sbm;
+  sbm = cv::StereoBM::create( ndisparities, SADWindowSize );
+
   // reading parameters
-  cv::FileStorage fs("stereoParams.xml", cv::FileStorage::READ);
+  cv::FileStorage fs("..//stereoParams.xml", cv::FileStorage::READ);
   if (!fs.isOpened() )
      {
        std::cout << "Failed to open stereoParams.xml" << std::endl;
@@ -91,7 +106,7 @@ int main(int argc, char **argv)
 
   char filename[200];
 
-  sprintf(filename,"..//..//images//left%02d.jpg",1);
+  sprintf(filename,"..//images//06//left%02d.jpg",1);
   cv::Mat  imagel = cv::imread(filename);
   if(!imagel.data)
   {
@@ -99,7 +114,7 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  sprintf(filename,"..//..//images//right%02d.jpg",1);
+  sprintf(filename,"..//images//06//right%02d.jpg",1);
   cv::Mat  imager = cv::imread(filename);
   if(!imager.data)
   {
@@ -144,11 +159,26 @@ int main(int argc, char **argv)
   }
 
   cv::imshow("Rectify_left",remap_imgl);
-  cv::imshow("Rectify_right",remap_imgr);
+  //cv::imshow("Rectify_right",remap_imgr);
 
   cv::setMouseCallback( "Rectify_left", mouseHandlerL,&remap_imgr);
   cv::setMouseCallback( "Rectify_right", mouseHandlerR,&remap_imgl);
 
+ //-- 3. Calculate the disparity image
+  sbm->compute( remap_imgl, remap_imgr, imgDisparity16S );//-- Check its extreme values
+  double minVal; double maxVal;
+  cv::minMaxLoc( imgDisparity16S, &minVal, &maxVal );
+  printf("Min disp: %f Max value: %f \n", minVal, maxVal);
+  
+  //-- 4. Display it as a CV_8UC1 image
+  //Display disparity as a CV_8UC1 image
+  // the disparity will be 16-bit signed (fixed-point) or
+  //32-bit floating-point image of the same size as left.
+  imgDisparity16S.convertTo( imgDisparity8U, CV_8UC1, 255/(maxVal - minVal));
+  namedWindow( "disparity", cv::WINDOW_NORMAL );
+  cv::imshow( "disparity", imgDisparity8U );
+
+void reprojectImageTo3D(InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int ddepth=-1 )
   std::cout << "Rectified images" << std::endl;
   cv::waitKey(-1);
 

@@ -10,6 +10,6 @@ target_link_libraries( stereoCalibration ${OpenCV_LIBS} )
 add_executable( lensDistortion lensDistortion.cpp )
 target_link_libraries( lensDistortion ${OpenCV_LIBS} )
 
-# Exec5
-add_executable( imageRectification imageRectification.cpp )
+# Exec5 usando o reconstruct da aula 07
+add_executable( imageRectification imageRectification_reconstruct.cpp )
 target_link_libraries( imageRectification ${OpenCV_LIBS} )
