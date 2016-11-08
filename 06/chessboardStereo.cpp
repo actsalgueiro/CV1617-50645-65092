@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     }
   }
     
-  cout << "N points (Scalar): " << corner_count << endl;
+  cout << "\nN points (Scalar): " << corner_count << endl;
 
   return 0;
 }

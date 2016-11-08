@@ -45,8 +45,8 @@ int FindAndDisplayChessboard(cv::Mat image,int board_w,int board_h, std::vector<
   if (true)
   {
 	cv::drawChessboardCorners(image, board_sz, cv::Mat(*corners), found);
-	cv::imshow("Calibration",image);
-	cv::waitKey(0); 
+	//cv::imshow("Calibration",image);
+	//cv::waitKey(0); 
   }
   return corners->size();
 }

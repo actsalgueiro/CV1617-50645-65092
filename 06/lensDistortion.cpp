@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 
     // read left image 
     sprintf(filename,"..//images//06//left%02d.jpg",i+1);
-    printf("\nReading %s",filename);
+    printf("\nReading %s\n",filename);
     image = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
     
     
@@ -126,22 +126,6 @@ int main(int argc, char **argv)
       return 0;
     }
     
-
-    /*
-    // read right image 
-    sprintf(filename,"..//images//06//right%02d.jpg",i+1);
-    printf("\nReading %s",filename);
-    image = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
-    
-
-
-    if(!image.data) 
-    {
-      printf("\nCould not load image file: %s\n",filename);
-      getchar();
-      return 0;
-    }
-    */
 
     // Undistort
     undistort(image, undistortedImage, intrinsic1, distCoeffs1);
