@@ -21,6 +21,9 @@ Notes:          Code generated with Visual Studio 2008 Intel OpenCV libraries
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+using namespace std;
+using namespace cv;
+
 void mouseHandlerL(int event, int x, int y, int flags, void* param)
  {
 
@@ -31,7 +34,7 @@ void mouseHandlerL(int event, int x, int y, int flags, void* param)
        std::cout << "pixel coordinates (Left)= " << x << "," << y << std::endl;
        std::vector<cv::Point2f> point;
        cv::line(*image,cvPoint(0,y),cvPoint(image->size().width,y),cvScalar(255), 1, 8, 0);
-       cv::imshow("Rectify_right",*image);
+       //cv::imshow("Rectify_right",*image);
       break;
    }
  }
@@ -45,7 +48,7 @@ void mouseHandlerR(int event, int x, int y, int flags, void* param)
      std::cout << "pixel coordinates (Left)= " << x << "," << y << std::endl;
      std::vector<cv::Point2f> point;
      cv::line(*image,cvPoint(0,y),cvPoint(image->size().width,y),cvScalar(255), 1, 8, 0);
-     cv::imshow("Rectify_left",*image);
+     //cv::imshow("Rectify_left",*image);
     break;
    }
  }
@@ -134,14 +137,14 @@ int main(int argc, char **argv)
   cv::Mat P2;
   cv::Mat Q;
 
-  std::cout << "\nStereoRectifyMap";
+  //std::cout << "\nStereoRectifyMap";
   cv::stereoRectify(intrinsics1, distortion1, intrinsics2, distortion2, imagel.size(), rotation, translation,R1, R2, P1, P2, Q,0);
 
-  std::cout << "\ncvInitUndistortRectifyMap";
+  //std::cout << "\ncvInitUndistortRectifyMap";
   cv::initUndistortRectifyMap(intrinsics1, distortion1, R1, P1, imagel.size(), CV_32FC1, map1x, map1y);
   cv::initUndistortRectifyMap(intrinsics2, distortion2, R2, P2, imagel.size(), CV_32FC1, map2x,map2y);
 
-  std::cout << "\nRemap images";
+  //std::cout << "\nRemap images";
   cv::Mat  gray_imagel;
   cv::Mat  remap_imgl;
   cv::cvtColor(imagel, gray_imagel , CV_RGB2GRAY);
@@ -158,7 +161,7 @@ int main(int argc, char **argv)
     cv::line(remap_imgr,cvPoint(0,i),cvPoint(remap_imgr.size().width,i),cvScalar(255), 1, 8, 0);
   }
 
-  cv::imshow("Rectify_left",remap_imgl);
+  //cv::imshow("Rectify_left",remap_imgl);
   //cv::imshow("Rectify_right",remap_imgr);
 
   cv::setMouseCallback( "Rectify_left", mouseHandlerL,&remap_imgr);
@@ -175,12 +178,26 @@ int main(int argc, char **argv)
   // the disparity will be 16-bit signed (fixed-point) or
   //32-bit floating-point image of the same size as left.
   imgDisparity16S.convertTo( imgDisparity8U, CV_8UC1, 255/(maxVal - minVal));
-  namedWindow( "disparity", cv::WINDOW_NORMAL );
-  cv::imshow( "disparity", imgDisparity8U );
+  //namedWindow( "disparity", cv::WINDOW_NORMAL );
+  //cv::imshow( "disparity", imgDisparity8U );
 
-void reprojectImageTo3D(InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int ddepth=-1 )
-  std::cout << "Rectified images" << std::endl;
-  cv::waitKey(-1);
+  Mat Image3D;
+  reprojectImageTo3D(imgDisparity8U, Image3D, Q);
+
+    FileStorage fw("../3dCoordinates.xml", FileStorage::WRITE);
+
+  
+  if(!fw.isOpened()){
+    cout << "Failed to open 3dCoordinates.xml" << endl;
+  }else
+  cout << endl << "Writing 3d coordinates" << endl;
+
+  // Write to file
+  fw << "coordinates" << Image3D;
+
+  fw.release();
+
+  cv::waitKey(-1);    
 
   return 0;
   }
