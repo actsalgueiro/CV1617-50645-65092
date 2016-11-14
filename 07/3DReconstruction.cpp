@@ -1,5 +1,5 @@
 /***********************************************************************************
-Name:           mapDisparity.cpp
+Name:           3DReconstruction.cpp
 Revision:
 Date:           18-09-2012
 Author:         Paulo Dias

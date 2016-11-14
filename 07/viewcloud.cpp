@@ -28,7 +28,7 @@ int  main (int argc, char** argv)
   (*cloud).points.resize ((*cloud).width * (*cloud).height);
 
 
-  FileStorage fs("..//3dCoordinates.xml", cv::FileStorage::READ);
+  cv::FileStorage fs("..//3dCoordinates.xml", cv::FileStorage::READ);
   if (!fs.isOpened() )
      {
        std::cout << "Failed to open 3dCoordinates.xml" << std::endl;
@@ -48,14 +48,6 @@ int  main (int argc, char** argv)
       p++;
     }
 
- /*
-  for (size_t i = 0; i < (*cloud).points.size (); ++i)
-  {
-    (*cloud).points[i].x = 10 * rand () / (RAND_MAX + 1.0f);
-    (*cloud).points[i].y = 10 * rand () / (RAND_MAX + 1.0f);
-    (*cloud).points[i].z = 10 * rand () / (RAND_MAX + 1.0f);
-  }
-*/
   
   pcl::visualization::CloudViewer viewer("Simple Cloud Viewer");
   viewer.showCloud(cloud);
