@@ -16,7 +16,7 @@ ADD_EXECUTABLE( viewCloud viewcloud.cpp )
 # Exec 4
 ADD_EXECUTABLE( PCD_3D_Format PCD_3D_Format.cpp )
 # Exec 5
-ADD_EXECUTABLE( ICP_alignment ICP_alignment.cpp )
+#ADD_EXECUTABLE( ICP_alignment ICP_alignment.cpp )
 
 #ADD_EXECUTABLE( viewOpenni pcl_io.cpp )
 #ADD_EXECUTABLE( viewFreenect pcl_io_freenect.cpp SimpleFreenect.cpp)
@@ -30,7 +30,7 @@ TARGET_LINK_LIBRARIES( 3DReconstruction ${OpenCV_LIBS} )
 TARGET_LINK_LIBRARIES( viewCloud ${OpenCV_LIBS} )
 TARGET_LINK_LIBRARIES( viewCloud ${PCL_LIBRARIES} )
 TARGET_LINK_LIBRARIES( PCD_3D_Format ${PCL_LIBRARIES} )
-TARGET_LINK_LIBRARIES( ICP_alignment ${PCL_LIBRARIES} )
+#TARGET_LINK_LIBRARIES( ICP_alignment ${PCL_LIBRARIES} )
 
 #TARGET_LINK_LIBRARIES( viewOpenni ${OpenCV_LIBS} ${PCL_LIBRARIES} )
 #TARGET_LINK_LIBRARIES( viewFreenect ${OpenCV_LIBS} ${PCL_LIBRARIES} freenect)

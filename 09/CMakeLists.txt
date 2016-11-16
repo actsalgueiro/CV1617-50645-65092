@@ -8,7 +8,7 @@ FIND_PACKAGE( OpenCV REQUIRED )
 FIND_PACKAGE( PCL 1.2 REQUIRED )
 
 # Exec 1
-#ADD_EXECUTABLE( mapDisparity mapDisparity.cpp )
+ADD_EXECUTABLE( lucasKanade lucasKanade.cpp )
 # Exec 2
 #ADD_EXECUTABLE( 3DReconstruction 3DReconstruction.cpp )
 # Exec 3
@@ -18,7 +18,7 @@ include_directories( ${PCL_INCLUDE_DIRS} )
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-#TARGET_LINK_LIBRARIES( mapDisparity ${OpenCV_LIBS} )
+TARGET_LINK_LIBRARIES( lucasKanade ${OpenCV_LIBS} )
 #TARGET_LINK_LIBRARIES( 3DReconstruction ${OpenCV_LIBS} )
 #TARGET_LINK_LIBRARIES( viewCloud ${OpenCV_LIBS} )
 #TARGET_LINK_LIBRARIES( viewCloud ${PCL_LIBRARIES} )
