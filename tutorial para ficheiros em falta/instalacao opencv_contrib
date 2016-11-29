@@ -1,0 +1,10 @@
+1. git clone https://github.com/opencv/opencv.git opencv
+2. cd opencv
+3. git clone https://github.com/opencv/opencv_contrib.git opencv_contrib
+4. criar um pasta build dentro da paste opencv_contrib
+5. cd para a pasta build
+6. cmake -D OPENCV_EXTRA_MODULES_PATH=/home/filipe/Documentos/opencv/opencv_contrib/modules /home/filipe/Documentos/opencv/
+    ^ utilizar os caminhos completos para garantir que nao dá erro
+7. make -j5
+7.1. Caso dê o erro de numeric_limits: Adicionar #include <limits> no ficheiro afetado e correr novamente
+8. sudo make install
