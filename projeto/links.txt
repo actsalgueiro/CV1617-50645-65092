@@ -1,3 +1,0 @@
-https://www.intorobotics.com/how-to-detect-and-track-object-with-opencv/
-http://mccormickml.com/2013/05/09/hog-person-detector-tutorial/
-http://www.magicandlove.com/blog/2011/08/26/people-detection-in-opencv-again/
