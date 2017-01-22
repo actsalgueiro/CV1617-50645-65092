@@ -175,6 +175,7 @@ int main(int, char** argv)
 		{
 			
 			cv::Rect brect = cv::boundingRect(contourstable[i]);
+			// O problema de P3 pode estar aqui na detecao de retangulos com areas com um tamanho maior que 1000 mas que nao sao celulas
 			if (brect.area() < 1000)
 				continue;
 				
