@@ -26,14 +26,11 @@ int main(int, char** argv)
     }
     
     // Show gray image
-    imshow("gray", gray);
+    //imshow("gray", gray);
     
     // Apply adaptiveThreshold at the bitwise_not of gray, notice the ~ symbol
     Mat bw;
     adaptiveThreshold(~gray, bw, 255, CV_ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, -2);
-    
-    // Show binary image
-    //imshow("binary", bw);
     
     // Create the images that will use to extract the horizontal and vertical lines
     Mat horizontal = bw.clone();
@@ -105,7 +102,7 @@ int main(int, char** argv)
             continue;
 
         rois.push_back(src(boundRect[i]).clone());
-	// CV_FILLED em vez de 2
+        
         drawContours( src, contours, i, Scalar(0, 0, 255), 2, 8, vector<Vec4i>(), 0, Point() );
         rectangle( src, boundRect[i].tl(), boundRect[i].br(), Scalar(0, 255, 0), 1, 8, 0 );
     }
@@ -117,56 +114,123 @@ int main(int, char** argv)
     for(size_t i = 0; i < rois.size(); ++i)
     {
 		imshow("roi", rois[i]);
-		   
-		/* Ainda nao esta funcional esta parte     
-        // Extract the tables
-		vector<Vec4i> hierarchy2;
-		std::vector<std::vector<cv::Point> > contours2;
-		cv::findContours(mask, contours2, hierarchy2, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-		
-		vector<vector<Point> > contours_poly( contours.size() );
-		vector<Rect> boundRect( contours.size() );
-		vector<Mat> rois2;
-
-		for (size_t i = 0; i < contours.size(); i++)
-		{
-			Mat image = rois[i];
-			// find the area of each contour
-			double area = contourArea(contours[i]);
-
-		   // filter individual lines of blobs that might exist and they do not represent a table
-			//if(area < 100) // value is randomly chosen, you will need to find that by yourself with trial and error procedure
-			//    continue;
-
-			approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-			boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-
-			// find the number of joints that each table has
-			Mat roi = joints(boundRect[i]);
-
-			vector<vector<Point> > joints_contours;
-			findContours(roi, joints_contours, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-
-			// if the number is not more than 5 then most likely it not a table
-			if(joints_contours.size() <= 3)
-				continue;
-
-			rois2.push_back(image(boundRect[i]).clone());
+		Mat table = rois[i];
 	
-			drawContours( src, contours, i, Scalar(0, 0, 255), 2, 8, vector<Vec4i>(), 0, Point() );
-			rectangle( src, boundRect[i].tl(), boundRect[i].br(), Scalar(0, 255, 0), 1, 8, 0 );
+		
+		// Transform source image to gray if it is not
+		cvtColor(table, table, CV_BGR2GRAY);
+		
+		// Apply adaptiveThreshold at the bitwise_not of gray, notice the ~ symbol
+		Mat bwtable;
+		adaptiveThreshold(~table, bwtable, 255, CV_ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, -2);
+		//Mat wbtable;
+		//adaptiveThreshold(~table, wbtable, 255, CV_ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 15, -2);
+		
+		// Create the images that will use to extract the horizontal and vertical lines
+		Mat horizontaltable = bwtable.clone();
+		Mat verticaltable = bwtable.clone();
+		
+		// Specify size on horizontal axis
+		int horizontalsizetable = horizontaltable.cols / 30;
+		
+		// Create structure element for extracting horizontal lines through morphology operations
+		Mat horizontalStructuretable = getStructuringElement(MORPH_RECT, Size(horizontalsizetable,1));
+		// Apply morphology operations
+		erode(horizontaltable, horizontaltable, horizontalStructuretable, Point(-1, -1));
+		dilate(horizontaltable, horizontaltable, horizontalStructuretable, Point(-1, -1));
+		
+		// Specify size on vertical axis
+		int verticalsizetable = verticaltable.rows / 30;
+		// Create structure element for extracting vertical lines through morphology operations
+		Mat verticalStructuretable = getStructuringElement(MORPH_RECT, Size( 1,verticalsizetable));
+		// Apply morphology operations
+		erode(verticaltable, verticaltable, verticalStructuretable, Point(-1, -1));
+		dilate(verticaltable, verticaltable, verticalStructuretable, Point(-1, -1));
+		
+		// Create the mask for the table
+		Mat mask2 = horizontaltable + verticaltable;
+		
+		// Remove the table lines from the answer sheet
+		Mat answers = bwtable - mask2;
+		
+		medianBlur(answers, answers, 3);
+		imshow("answersbw", answers);
+		
+		
+		
+		// Get each rectangle from the table
+		vector<vector<Point> > contourstable;
+		vector<Vec4i> hierarchytable;
+
+		Canny( table, table, 100, 200, 3 );
+		
+		findContours( table, contourstable, hierarchytable, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+		Mat drawing = Mat::zeros( table.size(), CV_8UC3 );
+		
+		vector<bool> sheet;
+		
+		// Check each rectangle
+		for( int i = 0; i< contourstable.size(); i++ )
+		{
+			
+			cv::Rect brect = cv::boundingRect(contourstable[i]);
+			if (brect.area() < 1000)
+				continue;
+				
+			rectangle(drawing, brect, CV_RGB(0,0,255), 3);
+			
+			// Setup the coordinates of the rectangle
+			int y = brect.y;
+			int xmax = brect.x + brect.width;
+			int ymax = y + brect.height;
+		
+			bool foundWhitePixel = false;
+			// Check each pixel
+			for(; y < ymax; y++){
+				for(int x = brect.x; x < xmax; x++){
+					
+					if(answers.at<uchar>(y, x) == 255){
+						sheet.push_back(true);
+						foundWhitePixel = true;
+						break;
+					}
+				}
+				if(foundWhitePixel)
+					break;
+			}
+			// If no white pixel has been found in this rectangle then add it has false
+			if(!foundWhitePixel)
+				sheet.push_back(false);
 		}
 		
-		for(size_t i = 0; i < rois2.size(); ++i)
-		{
-			imshow("roi2", rois2[i]); 
-			 waitKey();
+		
+		//int nlinhas;
+		int ncolunas;
+		/*cout << "Indique o numero de linhas: ";
+		cin >> nlinhas;*/
+		
+		cout << endl << "Indique o numero de colunas: ";
+		cin >> ncolunas;
+	
+		int k = 0;
+		// Pop the last element that does not exist on the table but was added because the cycle runs one time more than the table size
+		sheet.pop_back();
+		while(sheet.size() > 0){
+			if(k%ncolunas==0)
+				cout << endl;
+			cout << sheet.back() << " ";
+			sheet.pop_back();
+			k++;
+			
 		}
-		     */
+		
+		cout << endl;
 
-        waitKey();
+		waitKey(0);
+		imshow( "Contours", drawing);
     }
-    
+
     waitKey(0);
     return 0;
 }
