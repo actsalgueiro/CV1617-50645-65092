@@ -54,6 +54,12 @@ bool contour_leftright ( const vector<Point>& a, const vector<Point> & b ) {
     return ( (ra.x) < (rb.x) );
 }
 
+bool compareContourAreas ( vector<Point> contour1, vector<Point> contour2 ) {
+    double i = fabs( contourArea(Mat(contour1)) );
+    double j = fabs( contourArea(Mat(contour2)) );
+    return ( i < j );
+}
+
 int main(int, char** argv)
 {
     // Load the image
@@ -150,7 +156,7 @@ int main(int, char** argv)
     warpPerspective(src, transformed, transmtx, src.size());
     transformed = transformed(boundrect);
 
-    erode(roi,roi,element);
+    //erode(roi,roi,element);
 
     /*
 	 * EXTRACTING THE LINES
@@ -159,7 +165,7 @@ int main(int, char** argv)
     Mat horizontal = roi.clone();
     Mat vertical = roi.clone();
 
-    int scale = 15;
+    int scale = 10;
 
     // Specify size on horizontal axis
     int horizontalsize = horizontal.cols / scale;
@@ -169,6 +175,7 @@ int main(int, char** argv)
 
     // Apply morphology operations
     erode(horizontal, horizontal, horizontalStructure, Point(-1, -1));
+    dilate(horizontal, horizontal, horizontalStructure, Point(-1, -1));
     dilate(horizontal, horizontal, horizontalStructure, Point(-1, -1));
 
     // Specify size on vertical axis
@@ -180,14 +187,14 @@ int main(int, char** argv)
     // Apply morphology operations
     erode(vertical, vertical, verticalStructure, Point(-1, -1));
     dilate(vertical, vertical, verticalStructure, Point(-1, -1));
-	//    dilate(vertical, vertical, verticalStructure, Point(-1, -1)); // expand vertical lines
+	dilate(vertical, vertical, verticalStructure, Point(-1, -1)); // expand vertical lines
 
 	// Show extracted vertical lines
-    /*namedWindow("vertical", CV_WINDOW_NORMAL);
-    imshow("vertical", vertical);*/
+    namedWindow("vertical", CV_WINDOW_NORMAL);
+    imshow("vertical", vertical);
     // Show extracted horizontal lines
-    /*namedWindow("horizontal", CV_WINDOW_NORMAL);
-    imshow("horizontal", horizontal);*/
+    namedWindow("horizontal", CV_WINDOW_NORMAL);
+    imshow("horizontal", horizontal);
 
     Mat mask = horizontal + vertical;
 	/*namedWindow("mask", CV_WINDOW_NORMAL);
@@ -201,13 +208,25 @@ int main(int, char** argv)
     vector<Vec4i> hierarchyC;
 
     // dilate the intersections for finding the contours easily
-    int dilation_size = 1;
+    /*int dilation_size = 1;
     element = getStructuringElement( MORPH_CROSS,
                                      Size( 2*dilation_size + 1, 2*dilation_size+1 ),
                                      Point( dilation_size, dilation_size ) );
     dilate(joints, joints, element);
 
+    printf("TESTE\n");*/
+
     findContours( joints, contoursC, hierarchyC, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+    printf("num contours: %d\n", contoursC.size());
+
+    if(contoursC.size() > ((COL+1)*(ROW+1)) )
+    {
+    	sort(contoursC.begin(), contoursC.end(), compareContourAreas );
+    	contoursC.erase(contoursC.begin(), contoursC.begin() + (contoursC.size() - (COL+1)*(ROW+1)) );
+    }
+
+    printf("num contours: %d\n", contoursC.size());
 
     // sort the contours(intersections) from top to bottom, then from left to right
 	sort(contoursC.begin(), contoursC.end(), contour_topbot);
@@ -215,14 +234,24 @@ int main(int, char** argv)
 		sort(contoursC.begin()+i, contoursC.begin()+i+COL+1, contour_leftright);
 
 	// drawing the corners
-  	/*for( int i = 0; i< contoursC.size(); i++ )
+  	for( int i = 0; i< contoursC.size(); i++ )
     {
-       drawContours( transformed, contoursC, i, red, 6, 8, hierarchyC, 0, Point() );
-    }*/
+       	drawContours( transformed, contoursC, i, red, 1, 8, hierarchyC, 0, Point() );
+		/*namedWindow("transformed", CV_WINDOW_NORMAL);
+		imshow("transformed", transformed);
+		waitKey(9999);*/
+    }
 
     Mat detectROI = transformed.clone();
     cvtColor(detectROI, detectROI, CV_BGR2GRAY);
-    detectROI = preprocess(detectROI);
+    //detectROI = preprocess(detectROI);
+    GaussianBlur(detectROI, detectROI, Size(11,11), 0);
+    adaptiveThreshold(detectROI, detectROI, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 7, 2);
+    int dilation_size = 4;
+    element = getStructuringElement( MORPH_CROSS,
+                                     Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                                     Point( dilation_size, dilation_size ) );
+    dilate(detectROI,detectROI, element);
     /// create a rectangle for each cell
     vector<Rect> cells;
     for(int i = 0; i < ROW; i++ )
@@ -257,11 +286,11 @@ int main(int, char** argv)
     			select = 99;
     		else{
     			// threshold for a cross
-    			if(s1>36 & s1<93)
+    			if(s1>57 & s1<132)
     				select = 1;
 	    		else{
 	    			// threshold for a filled square
-	    			if(s1>=93)
+	    			if(s1>=132)
 	    				select = 77;
 	    		}
     		}
@@ -277,8 +306,8 @@ int main(int, char** argv)
     	rectangle(transformed, cells[i], red, 2, 8, 0);
 
 
-    /*namedWindow("joints", CV_WINDOW_NORMAL);
-    imshow("joints", joints);*/
+    namedWindow("joints", CV_WINDOW_NORMAL);
+    imshow("joints", joints);
 
 
 
