@@ -13,9 +13,28 @@ using namespace std;
 using namespace cv;
 
 /// MODIFY THIS VALUES TO FIT THE GRID
+
+// IHC Tabela 1
+
 int POS_ANS = 4;
 int ROW = 12;
 int COL = 15;
+
+// IHC Tabela 2
+/*
+int POS_ANS = 2;
+int ROW = 9;
+int COL = 6;
+*/
+// P3
+/*
+int POS_ANS = 2;
+int ROW = 21;
+int COL = 3;
+*/
+// Correct answers array
+int correctAnswers[] = {2,3,1,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1};
+
 
 int thresh = 10;
 Scalar red = Scalar(0,0,255);
@@ -26,7 +45,64 @@ Mat grid;
 Mat canny_output;
 Mat element;
 
+// Draws a rectangle around the entire table for the case where the table is missing a corner
+Mat drawMissingCorners(Mat m){
+
+    Mat horizontal;
+    adaptiveThreshold(m, horizontal, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 5, 2);
+    Mat vertical = horizontal.clone();
+
+    
+    // Horizontal axis
+    int horizontalsize = horizontal.cols / 30;
+    Mat horizontalStructure = getStructuringElement(MORPH_RECT, Size(horizontalsize,1));
+    
+    // Apply morphology operations
+    erode(horizontal, horizontal, horizontalStructure, Point(-1, -1));
+    dilate(horizontal, horizontal, horizontalStructure, Point(-1, -1));
+    
+    // Vertical axis
+    int verticalsize = vertical.rows / 30;
+    Mat verticalStructure = getStructuringElement(MORPH_RECT, Size( 1,verticalsize));
+    
+    // Apply morphology operations
+    erode(vertical, vertical, verticalStructure, Point(-1, -1));
+    dilate(vertical, vertical, verticalStructure, Point(-1, -1));
+    
+    /*
+     * Retirado de http://answers.opencv.org/question/63847/how-to-extract-tables-from-an-image/
+     * */
+    // create a mask which includes the tables
+    Mat mask = horizontal + vertical;
+    
+    Mat joints;
+    bitwise_and(horizontal, vertical, joints);
+    
+    vector<Vec4i> hierarchy;
+    std::vector<std::vector<cv::Point> > contours;
+    cv::findContours(mask, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	
+    vector<vector<Point> > contours_poly( contours.size() );
+    vector<Rect> boundRect( contours.size() );
+    vector<Mat> rois;
+
+	// Draw the rectangle around the entire table
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+
+        approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+        boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+
+        rectangle( m, boundRect[i].tl(), boundRect[i].br(), Scalar(0, 0, 0), 3, 8, 0 );
+    }
+    
+    return m;
+}
+
 Mat preprocess(Mat m){
+	
+	m = drawMissingCorners(m);
+	
 	GaussianBlur(m, m, Size(11,11), 0);
     adaptiveThreshold(m, m, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 5, 2);
 
@@ -60,6 +136,7 @@ bool compareContourAreas ( vector<Point> contour1, vector<Point> contour2 ) {
     return ( i < j );
 }
 
+
 int main(int, char** argv)
 {
     // Load the image
@@ -81,7 +158,7 @@ int main(int, char** argv)
     }
     
     grid = gray.clone();
-    int gridArr[12][15] = {0};
+    int gridArr[ROW][COL] = {0};
 
     /// Pre-process the grid
     grid = preprocess(grid);
@@ -133,6 +210,7 @@ int main(int, char** argv)
     boundrect = boundingRect(contours[0]);
     rectW = boundrect.width;
 
+	
     /// prepare for the perspective transform
     vector<Point2f> quad_pts;
     vector<Point2f> squre_pts;
@@ -148,8 +226,11 @@ int main(int, char** argv)
     Mat transmtx = getPerspectiveTransform(quad_pts,squre_pts);
 
     Mat roi = gray.clone();
+    
     roi = preprocess(roi);
+
     warpPerspective(roi, roi, transmtx, grid.size());
+
     roi = roi(boundrect);
 
     Mat transformed = Mat::zeros(src.rows, src.cols, CV_8UC3);
@@ -157,6 +238,7 @@ int main(int, char** argv)
     transformed = transformed(boundrect);
 
     //erode(roi,roi,element);
+
 
     /*
 	 * EXTRACTING THE LINES
@@ -195,7 +277,7 @@ int main(int, char** argv)
     // Show extracted horizontal lines
     namedWindow("horizontal", CV_WINDOW_NORMAL);
     imshow("horizontal", horizontal);
-
+	
     Mat mask = horizontal + vertical;
 	/*namedWindow("mask", CV_WINDOW_NORMAL);
     imshow("mask", mask);*/
@@ -308,7 +390,7 @@ int main(int, char** argv)
 
     namedWindow("joints", CV_WINDOW_NORMAL);
     imshow("joints", joints);
-
+    
 
 
     //Mat transformedGrid = Mat::zeros(grid.rows, grid.cols, CV_8UC3);
@@ -349,8 +431,8 @@ int main(int, char** argv)
 
     namedWindow("ROI", CV_WINDOW_NORMAL);
     imshow("ROI", detectROI);
-
-
+    
+   
     /// grid matrix with filled ratio
     for(int j = 0; j < COL; ++j)
     	printf("|-%s-", "---");
@@ -364,6 +446,85 @@ int main(int, char** argv)
     for(int j = 0; j < COL; ++j)
     	printf("|-%s-", "---");
    	printf("|\n");
+   	
+   	
+   	
+   	
+   	// Exam sheet correction
+   	/*
+     * Correct = 1
+     * Not answered = 0
+     * Incorrect = -1
+     * */
+    
+    // Get student answers
+    int ansNRows = ROW - 1;
+    int ansNCols = COL/POS_ANS;
+    int answers[ansNRows][ansNCols] = {0};
+    int ansrow = 0;
+    
+    // One of the elements is not being initialized with zero
+	for(int l = 0; l < ansNCols; l++){
+		for(int k = 0; k < ansNRows; k++){
+			answers[k][l] = 0;
+		}
+	}
+	for(int i = 1; i < ROW; ++i){
+		int anscol = 0;
+		for(int j = 1; j < COL; ++j){
+			// For multiple questions in the same row
+			if(gridArr[i][j] == 99){
+				anscol++;
+				continue;;
+			}
+			
+			// Look for an answer
+			if(gridArr[i][j] == 1){
+				// Check for multiple answers to the same question
+				if(answers[ansrow][anscol] != 0){
+					answers[ansrow][anscol] = -1;
+				}else{
+					// Answer equals the position of the correct answer
+					if((j % (POS_ANS + 1)) == correctAnswers[(anscol * ansNRows) + ansrow]){
+						answers[ansrow][anscol] = 1;
+					}else{
+						answers[ansrow][anscol] = -1;
+					}
+				}
+			}
+			
+		}
+		// Increase the index for the row of the answers array
+		ansrow++;
+	}
+	
+	
+   	vector<int> correction;
+	for(int l = 0; l < ansNCols; l++){
+		for(int k = 0; k < ansNRows; k++){
+			correction.push_back(answers[k][l]);
+		}
+	}
+	
+	// Write correction to file
+	ofstream myfile;
+	myfile.open ("correction.txt");
+	for(int i = 0; i < correction.size(); i++){
+		myfile << (i + 1) << " - " << correction.at(i) << "\n";
+	}
+	myfile.close();
+   	
+   	// Print the results
+	for(int i = 0; i < correction.size(); i++){
+		if(correction.at(i) == 1){
+			printf("%3d - Correct\n", (i+1));
+		}else if(correction.at(i) == 0){
+			printf("%3d - Not answered\n", (i+1));
+		}else{
+			printf("%3d - Incorrect\n", (i+1));
+		}
+	}
+
 
     waitKey(0);
     return 0;
