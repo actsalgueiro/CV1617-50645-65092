@@ -8,6 +8,8 @@
 #include <iterator>
 #include <math.h>
 #include <cmath>
+#include <fstream>
+#include <string>
 
 using namespace std;
 using namespace cv;
@@ -33,7 +35,8 @@ int ROW = 21;
 int COL = 3;
 */
 // Correct answers array
-int correctAnswers[] = {2,3,1,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1};
+vector<int> correctAnswers;
+//int correctAnswers[] = {2,3,1,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1};
 
 
 int thresh = 10;
@@ -44,6 +47,66 @@ int rectW;
 Mat grid;
 Mat canny_output;
 Mat element;
+
+// Print file format of the solution file
+void printSolutionFileFormat(){
+	cout << "Accepted solution file formats are: \n";
+	cout << "<number> <answer>\n";
+	cout << "or\n";
+	cout << "<answer>\n\n";
+}
+
+// Reads the file with the solution
+void readSolution(string fileName){
+	string line;
+	ifstream myfile(fileName.c_str());
+	if (myfile.is_open()){
+		while(getline (myfile,line)){
+			string s;
+			// Check if it is in the format <number> <answer>
+			if(line.length() > 2){
+				s = line.substr(line.find(" ") + 1);
+			}else{	// Format <answer>
+				s = line;
+			}	
+			const char *cstr = s.c_str();
+			char c = cstr[0];
+			// Convert to lower case
+			if(isupper(c))
+				c = tolower(c);
+			
+			// Check if it is true or false answers
+			if(POS_ANS == 2 && (c == 'f' || c == 'v' || c == 't')){
+				if(c == 'f')
+					correctAnswers.push_back(2);
+				else
+					correctAnswers.push_back(1);
+					
+			}else{
+				correctAnswers.push_back((c - 'a') + 1);
+			}
+		}
+		myfile.close();
+	}else{
+		cout << "Unable to open file";
+	}
+}
+
+// Get the information about the table 
+void getInitializationInfo(){
+	cout << "Insert the number of columns of the table: ";
+	cin >> COL;
+	cout << "Insert the number of rows of the table: ";
+	cin >> ROW;
+	cout << "Insert the number of possible answers for each question: ";
+	cin >> POS_ANS;
+	printSolutionFileFormat();
+	string filename;
+	cout << "Insert the name of the file with the solution: ";
+	cin >> filename;
+	readSolution(filename);
+}
+
 
 // Draws a rectangle around the entire table for the case where the table is missing a corner
 Mat drawMissingCorners(Mat m){
@@ -139,6 +202,9 @@ bool compareContourAreas ( vector<Point> contour1, vector<Point> contour2 ) {
 
 int main(int, char** argv)
 {
+	
+	getInitializationInfo();
+	
     // Load the image
     Mat src = imread(argv[1]);
     
