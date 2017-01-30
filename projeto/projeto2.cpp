@@ -17,24 +17,23 @@ using namespace cv;
 /// MODIFY THIS VALUES TO FIT THE GRID
 
 // IHC Tabela 1
-/*
-int POS_ANS = 4;
+
+/*int POS_ANS = 4;
 int ROW = 12;
 int COL = 15;*/
-string filename;
 
 // IHC Tabela 2
-/*
+
 int POS_ANS = 2;
 int ROW = 9;
 int COL = 6;
-*/
+
 
 // P3
 
-int POS_ANS = 2;
+/*int POS_ANS = 2;
 int ROW = 21;
-int COL = 3;
+int COL = 3;*/
 
 // Correct answers array
 int nQuestion = 32;
@@ -46,6 +45,12 @@ Scalar red = Scalar(0,0,255);
 Scalar green = Scalar(0,255,0);
 int rectW;
 int resolution;
+string filename;
+
+int nmec = 50645;
+double cotR = 0.3;
+double cotW = 0.1;
+double finalG = 0;
 
 Mat grid;
 Mat canny_output;
@@ -100,12 +105,20 @@ void readSolution(string fileName){
 
 // Get the information about the table 
 void getInitializationInfo(){
+    cout << "Insert the student number: ";
+    cin >> nmec;
 	cout << "Insert the number of columns of the table: ";
 	cin >> COL;
 	cout << "Insert the number of rows of the table: ";
 	cin >> ROW;
+    cout << "Insert the number of questions: ";
+    cin >> nQuestion;
 	cout << "Insert the number of possible answers for each question: ";
 	cin >> POS_ANS;
+    cout << "Insert the value of each right answer: ";
+    cin >> cotR;
+    cout << "Insert the value of each wrong answer: ";
+    cin >> cotW;
 	printSolutionFileFormat();
 	cout << "Insert the name of the file with the solution: ";
 	cin >> filename;
@@ -164,10 +177,7 @@ Mat drawMissingCorners(Mat m){
     return m;
 }
 
-Mat preprocess(Mat m, int threshold){
-	
-	m = drawMissingCorners(m);
-	
+Mat preprocess(Mat m, int threshold){	
 	GaussianBlur(m, m, Size(11,11), 0);
     adaptiveThreshold(m, m, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, threshold, 2);
 
@@ -214,10 +224,10 @@ bool compareContourAreas ( vector<Point> contour1, vector<Point> contour2 ) {
 int main(int, char** argv)
 {
 	
-	getInitializationInfo();
+	//getInitializationInfo();
 	filename = "../projeto/solution.txt";
 	// Set the number of questions
-	nQuestion =  ROW * (COL / (POS_ANS + 1));
+	//nQuestion =  ROW * (COL / (POS_ANS + 1));
 	
 	// Read the solution from the file
 	readSolution(filename);
@@ -623,19 +633,29 @@ int main(int, char** argv)
 		}
 	}
 
+    // counters for right and wrong answers
 	int cnt = 0;
+    int rightA = 0;
+    int wrongA = 0;
 	for(int i = 0; i< correction.size(); i++)
 	{
 		if (correction[i] == 1)
 		{
-			rectangle(transformed, studentAnswer[cnt], green, 2, 8, 0);
+            // draw the correct answer rectangle
+			rectangle(transformed, studentAnswer[cnt], green, 6, 8, 0);
 			cnt++;
+            finalG += cotR;
+            rightA++;
+
 		}
 		if (correction[i] == -1)
 		{
-			rectangle(transformed, studentAnswer[cnt], red, 2, 8, 0);
+            // draw the wrong answer rectangle
+			rectangle(transformed, studentAnswer[cnt], red, 6, 8, 0);
 			cnt++;
-		}
+            finalG -= cotW;
+            wrongA++;
+            }
 	}
 	
 	// Write correction to file
@@ -658,6 +678,28 @@ int main(int, char** argv)
 		}
 	}
 
+    Mat showResult = Mat::zeros(transformed.rows + 400, transformed.cols, CV_8UC3);
+    showResult = Scalar(255,255,255);
+
+    transformed.copyTo(showResult(Rect(0,0,transformed.cols, transformed.rows)));
+
+    int startY = transformed.size().height;
+
+    char strNMec[32];
+    char strRAns[32];
+    char strWAns[32];
+    char strGrade[32];
+
+    sprintf(strNMec, "Num MEC: %d", nmec);
+    sprintf(strRAns, "Respostas certas: %d", rightA);
+    sprintf(strWAns, "Respostas erradas: %d", wrongA);
+    sprintf(strGrade, "Nota: %3.1f", finalG);
+
+    putText(showResult, strNMec, Point(0 + 60,startY + 80), FONT_HERSHEY_PLAIN, 3.5, Scalar(0,0,0), 1, CV_AA);
+    putText(showResult, strRAns, Point(0 + 60,startY + 160), FONT_HERSHEY_PLAIN, 3.5, Scalar(0,0,0), 1, CV_AA);
+    putText(showResult, strWAns, Point(0 + 60,startY + 240), FONT_HERSHEY_PLAIN, 3.5, Scalar(0,0,0), 1, CV_AA);
+    putText(showResult, strGrade, Point(0 + 60,startY + 320), FONT_HERSHEY_PLAIN, 3.5, Scalar(0,0,0), 1, CV_AA);
+
 
     namedWindow("Grid", CV_WINDOW_NORMAL);
     imshow("Grid", grid);
@@ -672,7 +714,14 @@ int main(int, char** argv)
     imshow("ROI", detectROI);
     
     namedWindow("Result", CV_WINDOW_NORMAL);
-    imshow("Result", finalRes);
+    imshow("Result", showResult);
+
+
+    char tmpPath[32];
+    sprintf(tmpPath, "../Results/%d.jpg", nmec);
+    imwrite( tmpPath, showResult );
+
+    printf("Image saved on %s\n", tmpPath);
 
     waitKey(0);
     return 0;
