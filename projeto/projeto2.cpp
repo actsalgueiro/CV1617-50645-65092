@@ -21,13 +21,15 @@ using namespace cv;
 int POS_ANS = 4;
 int ROW = 12;
 int COL = 15;
+string filename;
 
 // IHC Tabela 2
-/*
-int POS_ANS = 2;
+
+/*int POS_ANS = 2;
 int ROW = 9;
 int COL = 6;
-*/
+string filename;*/
+
 // P3
 /*
 int POS_ANS = 2;
@@ -35,7 +37,8 @@ int ROW = 21;
 int COL = 3;
 */
 // Correct answers array
-vector<int> correctAnswers;
+int nQuestion = 32;
+vector<int> correctAnswers (nQuestion, 0);
 //int correctAnswers[] = {2,3,1,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1};
 
 
@@ -43,6 +46,7 @@ int thresh = 10;
 Scalar red = Scalar(0,0,255);
 Scalar green = Scalar(0,255,0);
 int rectW;
+int resolution;
 
 Mat grid;
 Mat canny_output;
@@ -98,10 +102,11 @@ void getInitializationInfo(){
 	cin >> COL;
 	cout << "Insert the number of rows of the table: ";
 	cin >> ROW;
+	cout << "Insert the number of questions: ";
+	cin >> nQuestion;
 	cout << "Insert the number of possible answers for each question: ";
 	cin >> POS_ANS;
 	printSolutionFileFormat();
-	string filename;
 	cout << "Insert the name of the file with the solution: ";
 	cin >> filename;
 	readSolution(filename);
@@ -109,7 +114,7 @@ void getInitializationInfo(){
 
 
 // Draws a rectangle around the entire table for the case where the table is missing a corner
-Mat drawMissingCorners(Mat m){
+/*Mat drawMissingCorners(Mat m){
 
     Mat horizontal;
     adaptiveThreshold(m, horizontal, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 5, 2);
@@ -132,9 +137,9 @@ Mat drawMissingCorners(Mat m){
     erode(vertical, vertical, verticalStructure, Point(-1, -1));
     dilate(vertical, vertical, verticalStructure, Point(-1, -1));
     
-    /*
+    
      * Retirado de http://answers.opencv.org/question/63847/how-to-extract-tables-from-an-image/
-     * */
+     * 
     // create a mask which includes the tables
     Mat mask = horizontal + vertical;
     
@@ -160,16 +165,25 @@ Mat drawMissingCorners(Mat m){
     }
     
     return m;
-}
+}*/
 
-Mat preprocess(Mat m){
+Mat preprocess(Mat m, int threshold){
 	
-	m = drawMissingCorners(m);
+	//m = drawMissingCorners(m);
 	
 	GaussianBlur(m, m, Size(11,11), 0);
-    adaptiveThreshold(m, m, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 5, 2);
+    adaptiveThreshold(m, m, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, threshold, 2);
 
-    int dilation_size = 4;
+    int dilation_size = 0;
+
+    if(resolution > 2000*4000)
+    	dilation_size = 4;
+    else if(resolution > 1500*3500)
+    	dilation_size = 3;
+    else if(resolution > 1000*1000)
+    	dilation_size = 2;
+    else
+    	dilation_size = 1;
 
     element = getStructuringElement( MORPH_CROSS,
                                      Size( 2*dilation_size + 1, 2*dilation_size+1 ),
@@ -203,8 +217,11 @@ bool compareContourAreas ( vector<Point> contour1, vector<Point> contour2 ) {
 int main(int, char** argv)
 {
 	
-	getInitializationInfo();
-	
+	//getInitializationInfo();
+	filename = "../projeto/solution.txt";
+	readSolution(filename);
+
+
     // Load the image
     Mat src = imread(argv[1]);
     
@@ -222,12 +239,16 @@ int main(int, char** argv)
     {
         gray = src;
     }
+
+    resolution = src.size().height * src.size().width;
+
+    printf("Resolution W: %d  |  H: %d\n", src.size().width, src.size().height);
     
     grid = gray.clone();
-    int gridArr[ROW][COL] = {0};
+    vector<vector<int> > gridArr( ROW, vector<int>(COL));
 
     /// Pre-process the grid
-    grid = preprocess(grid);
+    grid = preprocess(grid, 5);
 
     int max=-1; 
     Point maxPt; 
@@ -278,22 +299,55 @@ int main(int, char** argv)
 
 	
     /// prepare for the perspective transform
+    double dist1 = norm(contours_poly[0][0] - contours_poly[0][1]);
+    double dist2 = norm(contours_poly[0][0] - contours_poly[0][3]);
+
+    printf("dist1:%f \n", dist1);
+    printf("dist2:%f \n", dist2);
+
     vector<Point2f> quad_pts;
     vector<Point2f> squre_pts;
-    quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
-    quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
-    quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
-    quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+    
     squre_pts.push_back(Point2f(boundrect.x,boundrect.y));
     squre_pts.push_back(Point2f(boundrect.x,boundrect.y+boundrect.height));
     squre_pts.push_back(Point2f(boundrect.x+boundrect.width,boundrect.y));
     squre_pts.push_back(Point2f(boundrect.x+boundrect.width,boundrect.y+boundrect.height));
 
+    if(ROW < COL)
+    {
+    	if(dist1 > dist2)
+	    {
+			quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
+	    }else{
+	    	quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+	    }
+    }else{
+    	if(dist1 < dist2)
+	    {
+			quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
+	    }else{
+	    	quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
+		    quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+	    }
+    }
+
     Mat transmtx = getPerspectiveTransform(quad_pts,squre_pts);
 
     Mat roi = gray.clone();
+    Mat finalRes;
     
-    roi = preprocess(roi);
+    roi = preprocess(roi, 5);
 
     warpPerspective(roi, roi, transmtx, grid.size());
 
@@ -301,6 +355,7 @@ int main(int, char** argv)
 
     Mat transformed = Mat::zeros(src.rows, src.cols, CV_8UC3);
     warpPerspective(src, transformed, transmtx, src.size());
+    warpPerspective(src, finalRes, transmtx, src.size());
     transformed = transformed(boundrect);
 
     //erode(roi,roi,element);
@@ -338,11 +393,11 @@ int main(int, char** argv)
 	dilate(vertical, vertical, verticalStructure, Point(-1, -1)); // expand vertical lines
 
 	// Show extracted vertical lines
-    namedWindow("vertical", CV_WINDOW_NORMAL);
-    imshow("vertical", vertical);
+    /*namedWindow("vertical", CV_WINDOW_NORMAL);
+    imshow("vertical", vertical);*/
     // Show extracted horizontal lines
-    namedWindow("horizontal", CV_WINDOW_NORMAL);
-    imshow("horizontal", horizontal);
+    /*namedWindow("horizontal", CV_WINDOW_NORMAL);
+    imshow("horizontal", horizontal);*/
 	
     Mat mask = horizontal + vertical;
 	/*namedWindow("mask", CV_WINDOW_NORMAL);
@@ -382,26 +437,24 @@ int main(int, char** argv)
 		sort(contoursC.begin()+i, contoursC.begin()+i+COL+1, contour_leftright);
 
 	// drawing the corners
-  	for( int i = 0; i< contoursC.size(); i++ )
+  	/*for( int i = 0; i< contoursC.size(); i++ )
     {
        	drawContours( transformed, contoursC, i, red, 1, 8, hierarchyC, 0, Point() );
-		/*namedWindow("transformed", CV_WINDOW_NORMAL);
-		imshow("transformed", transformed);
-		waitKey(9999);*/
-    }
+    }*/
 
     Mat detectROI = transformed.clone();
     cvtColor(detectROI, detectROI, CV_BGR2GRAY);
-    //detectROI = preprocess(detectROI);
-    GaussianBlur(detectROI, detectROI, Size(11,11), 0);
+    detectROI = preprocess(detectROI, 7);
+    /*GaussianBlur(detectROI, detectROI, Size(11,11), 0);
     adaptiveThreshold(detectROI, detectROI, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 7, 2);
     int dilation_size = 4;
     element = getStructuringElement( MORPH_CROSS,
                                      Size( 2*dilation_size + 1, 2*dilation_size+1 ),
                                      Point( dilation_size, dilation_size ) );
-    dilate(detectROI,detectROI, element);
+    dilate(detectROI,detectROI, element);*/
     /// create a rectangle for each cell
     vector<Rect> cells;
+    vector<Rect> studentAnswer;
     for(int i = 0; i < ROW; i++ )
     {
     	for(int j = 0; j < COL; j++ )
@@ -412,15 +465,21 @@ int main(int, char** argv)
     		int rectX = contoursC[i*(COL+1)+j][0].x;
     		int rectY = contoursC[i*(COL+1)+j][0].y;
     		Rect c = Rect(rectX, rectY, rectW, rectH);
+    		Rect tmp = Rect(rectX, rectY, rectW, rectH);
 
     		/// Scaling the rectangle so it minimizes the lines detection
     		int rwidth  = c.width;
     		int rheight = c.height;
 
-    		c.width = round((c.width * 90) / 100.0f);
-		    c.height = round((c.height * 90) / 100.0f);        
+    		c.width = round((c.width * 80) / 100.0f);
+		    c.height = round((c.height * 80) / 100.0f);        
 		    c.x += (rwidth - c.width) / 2;
 		    c.y += (rheight - c.height) / 2;
+
+		    c.x += detectROI.size().width*0.003;
+		    c.y += detectROI.size().height*0.003;
+		    tmp.x += detectROI.size().width*0.003;
+		    tmp.y += detectROI.size().height*0.003;
 
     		Mat m1 = detectROI(c);
     		/// sum the pixels of the rect and divide by area to get ratio
@@ -434,11 +493,14 @@ int main(int, char** argv)
     			select = 99;
     		else{
     			// threshold for a cross
-    			if(s1>57 & s1<132)
+    			if(s1>30 & s1<104)
+    			{
     				select = 1;
+    				studentAnswer.push_back(c);
+    			}
 	    		else{
 	    			// threshold for a filled square
-	    			if(s1>=132)
+	    			if(s1>=104)
 	    				select = 77;
 	    		}
     		}
@@ -450,8 +512,8 @@ int main(int, char** argv)
     }
 
     /// print all cells borders
-    for(int i = 0; i < ROW*COL; i++)
-    	rectangle(transformed, cells[i], red, 2, 8, 0);
+    /*for(int i = 0; i < studentAnswer.size(); i++)
+    	rectangle(transformed, studentAnswer[i], red, 2, 8, 0);*/
 
 
     namedWindow("joints", CV_WINDOW_NORMAL);
@@ -485,19 +547,6 @@ int main(int, char** argv)
     {
         line( roi, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), red, 8, 8 );
     }*/
-
-    namedWindow("1", CV_WINDOW_NORMAL);
-    imshow("1", grid);
-
-    namedWindow("2", CV_WINDOW_NORMAL);
-    imshow("2", src);
-
-    namedWindow("transformed", CV_WINDOW_NORMAL);
-    imshow("transformed", transformed);
-
-    namedWindow("ROI", CV_WINDOW_NORMAL);
-    imshow("ROI", detectROI);
-    
    
     /// grid matrix with filled ratio
     for(int j = 0; j < COL; ++j)
@@ -526,7 +575,7 @@ int main(int, char** argv)
     // Get student answers
     int ansNRows = ROW - 1;
     int ansNCols = COL/POS_ANS;
-    int answers[ansNRows][ansNCols] = {0};
+    vector<vector<int> > answers( ROW, vector<int>(COL));
     int ansrow = 0;
     
     // One of the elements is not being initialized with zero
@@ -571,6 +620,21 @@ int main(int, char** argv)
 			correction.push_back(answers[k][l]);
 		}
 	}
+
+	int cnt = 0;
+	for(int i = 0; i< correction.size(); i++)
+	{
+		if (correction[i] == 1)
+		{
+			rectangle(transformed, studentAnswer[cnt], green, 2, 8, 0);
+			cnt++;
+		}
+		if (correction[i] == -1)
+		{
+			rectangle(transformed, studentAnswer[cnt], red, 2, 8, 0);
+			cnt++;
+		}
+	}
 	
 	// Write correction to file
 	ofstream myfile;
@@ -591,6 +655,21 @@ int main(int, char** argv)
 		}
 	}
 
+
+    namedWindow("Grid", CV_WINDOW_NORMAL);
+    imshow("Grid", grid);
+
+    namedWindow("Original", CV_WINDOW_NORMAL);
+    imshow("Original", src);
+
+    namedWindow("transformed", CV_WINDOW_NORMAL);
+    imshow("transformed", transformed);
+
+    namedWindow("ROI", CV_WINDOW_NORMAL);
+    imshow("ROI", detectROI);
+    
+    namedWindow("Result", CV_WINDOW_NORMAL);
+    imshow("Result", finalRes);
 
     waitKey(0);
     return 0;
