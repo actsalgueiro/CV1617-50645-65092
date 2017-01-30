@@ -17,29 +17,28 @@ using namespace cv;
 /// MODIFY THIS VALUES TO FIT THE GRID
 
 // IHC Tabela 1
-
+/*
 int POS_ANS = 4;
 int ROW = 12;
-int COL = 15;
+int COL = 15;*/
 string filename;
 
 // IHC Tabela 2
-
-/*int POS_ANS = 2;
+/*
+int POS_ANS = 2;
 int ROW = 9;
 int COL = 6;
-string filename;*/
+*/
 
 // P3
-/*
+
 int POS_ANS = 2;
 int ROW = 21;
 int COL = 3;
-*/
+
 // Correct answers array
 int nQuestion = 32;
 vector<int> correctAnswers (nQuestion, 0);
-//int correctAnswers[] = {2,3,1,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1,1,2,3,4,4,3,2,1};
 
 
 int thresh = 10;
@@ -65,6 +64,7 @@ void readSolution(string fileName){
 	string line;
 	ifstream myfile(fileName.c_str());
 	if (myfile.is_open()){
+		int i = 0;
 		while(getline (myfile,line)){
 			string s;
 			// Check if it is in the format <number> <answer>
@@ -72,7 +72,8 @@ void readSolution(string fileName){
 				s = line.substr(line.find(" ") + 1);
 			}else{	// Format <answer>
 				s = line;
-			}	
+			}
+			
 			const char *cstr = s.c_str();
 			char c = cstr[0];
 			// Convert to lower case
@@ -82,13 +83,14 @@ void readSolution(string fileName){
 			// Check if it is true or false answers
 			if(POS_ANS == 2 && (c == 'f' || c == 'v' || c == 't')){
 				if(c == 'f')
-					correctAnswers.push_back(2);
+					correctAnswers.at(i) = 2;
 				else
-					correctAnswers.push_back(1);
+					correctAnswers.at(i) = 1;
 					
 			}else{
-				correctAnswers.push_back((c - 'a') + 1);
+				correctAnswers.at(i) = (c - 'a') + 1;
 			}
+			i++;
 		}
 		myfile.close();
 	}else{
@@ -102,8 +104,6 @@ void getInitializationInfo(){
 	cin >> COL;
 	cout << "Insert the number of rows of the table: ";
 	cin >> ROW;
-	cout << "Insert the number of questions: ";
-	cin >> nQuestion;
 	cout << "Insert the number of possible answers for each question: ";
 	cin >> POS_ANS;
 	printSolutionFileFormat();
@@ -114,7 +114,7 @@ void getInitializationInfo(){
 
 
 // Draws a rectangle around the entire table for the case where the table is missing a corner
-/*Mat drawMissingCorners(Mat m){
+Mat drawMissingCorners(Mat m){
 
     Mat horizontal;
     adaptiveThreshold(m, horizontal, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 5, 2);
@@ -136,10 +136,7 @@ void getInitializationInfo(){
     // Apply morphology operations
     erode(vertical, vertical, verticalStructure, Point(-1, -1));
     dilate(vertical, vertical, verticalStructure, Point(-1, -1));
-    
-    
-     * Retirado de http://answers.opencv.org/question/63847/how-to-extract-tables-from-an-image/
-     * 
+  
     // create a mask which includes the tables
     Mat mask = horizontal + vertical;
     
@@ -165,11 +162,11 @@ void getInitializationInfo(){
     }
     
     return m;
-}*/
+}
 
 Mat preprocess(Mat m, int threshold){
 	
-	//m = drawMissingCorners(m);
+	m = drawMissingCorners(m);
 	
 	GaussianBlur(m, m, Size(11,11), 0);
     adaptiveThreshold(m, m, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, threshold, 2);
@@ -217,10 +214,13 @@ bool compareContourAreas ( vector<Point> contour1, vector<Point> contour2 ) {
 int main(int, char** argv)
 {
 	
-	//getInitializationInfo();
+	getInitializationInfo();
 	filename = "../projeto/solution.txt";
+	// Set the number of questions
+	nQuestion =  ROW * (COL / (POS_ANS + 1));
+	
+	// Read the solution from the file
 	readSolution(filename);
-
 
     // Load the image
     Mat src = imread(argv[1]);
@@ -548,6 +548,7 @@ int main(int, char** argv)
         line( roi, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), red, 8, 8 );
     }*/
    
+	printf("\n\n Table: \n");
     /// grid matrix with filled ratio
     for(int j = 0; j < COL; ++j)
     	printf("|-%s-", "---");
@@ -560,7 +561,8 @@ int main(int, char** argv)
     }
     for(int j = 0; j < COL; ++j)
     	printf("|-%s-", "---");
-   	printf("|\n");
+   	printf("|\n\n\n");
+
    	
    	
    	
@@ -613,7 +615,7 @@ int main(int, char** argv)
 		ansrow++;
 	}
 	
-	
+	// Transform the array into a vector
    	vector<int> correction;
 	for(int l = 0; l < ansNCols; l++){
 		for(int k = 0; k < ansNRows; k++){
@@ -645,6 +647,7 @@ int main(int, char** argv)
 	myfile.close();
    	
    	// Print the results
+   	printf(" Correction: \n");
 	for(int i = 0; i < correction.size(); i++){
 		if(correction.at(i) == 1){
 			printf("%3d - Correct\n", (i+1));
